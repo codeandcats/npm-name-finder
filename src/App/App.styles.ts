@@ -93,3 +93,13 @@ export const available = style({
 
   color: '#050'
 })
+
+export const spinnerContainer = style({
+  $debugName: 'spinnerContainer',
+
+  alignItems: 'center',
+  display: 'flex',
+  justifyContent: 'center',
+  marginTop: px(75),
+  width: '100%',
+})

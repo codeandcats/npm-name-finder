@@ -2,6 +2,7 @@ import React from 'react';
 import logoUrl from './logo.png';
 import * as styles from './App.styles';
 import { setState } from '../utils/react';
+import { BounceLoader as Spinner } from 'react-spinners';
 
 interface Props {
 }
@@ -103,6 +104,7 @@ class App extends React.Component<Props, State> {
           <form onSubmit={this.search}>
             <input
               className={styles.searchBox}
+              disabled={this.state.searching}
               id="searchBox"
               onChange={this.handleSearchBoxChange}
               placeholder="Package name"
@@ -118,23 +120,31 @@ class App extends React.Component<Props, State> {
         </section>
 
         <section className={styles.results}>
-          <ul>
-            {
-              this.state.searchResults ?
-                this.state.searchResults.map(searchResult => (
-                  <li
-                    className={
-                      searchResult.isAvailable ?
-                        styles.available :
-                        styles.unavailable
-                    }
-                    key={searchResult.packageName}
-                  >
-                    {searchResult.packageName}
-                  </li>
-                )) : null
-            }
-          </ul>
+          {
+            this.state.searching ?
+              <div className={styles.spinnerContainer}>
+                <Spinner color="#c22" size={80} />
+              </div> :
+              (
+                <ul>
+                  {
+                    this.state.searchResults ?
+                      this.state.searchResults.map(searchResult => (
+                        <li
+                          className={
+                            searchResult.isAvailable ?
+                              styles.available :
+                              styles.unavailable
+                          }
+                          key={searchResult.packageName}
+                        >
+                          {searchResult.packageName}
+                        </li>
+                      )) : null
+                  }
+                </ul>
+              )
+          }
         </section>
       </div>
     );
