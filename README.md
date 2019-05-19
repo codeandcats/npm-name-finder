@@ -1,5 +1,8 @@
 <p align="center">
-  <img src="src/HeaderLogo/logo.png">
+  <img
+    src="src/HeaderLogo/logo.png"
+    style="max-width: 500px"
+  >
   <p align="center">
     Finding a good, meaningful, node package name that is available on NPM is hard.
   <p>
