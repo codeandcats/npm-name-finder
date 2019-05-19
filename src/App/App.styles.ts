@@ -1,5 +1,7 @@
-import { px } from 'csx';
-import { style } from 'typestyle';
+import { px, percent } from 'csx';
+import { style, media } from 'typestyle';
+
+export const showSearchButtonAtScreenWidth = 450;
 
 export const app = style({
   $debugName: 'app',
@@ -7,12 +9,6 @@ export const app = style({
   padding: px(50),
   boxSizing: 'border-box',
   textAlign: 'center',
-});
-
-export const logo = style({
-  $debugName: 'logo',
-
-  width: px(600),
 });
 
 export const subtitle = style({
@@ -34,6 +30,14 @@ export const availableText = style({
   color: '#050',
 });
 
+export const searchForm = style(
+  { $debugName: 'searchForm' },
+  media(
+    { maxWidth: showSearchButtonAtScreenWidth },
+    { width: percent(100) }
+  )
+);
+
 export const search = style({
   $debugName: 'search',
 
@@ -45,35 +49,30 @@ export const search = style({
   alignItems: 'center'
 });
 
-export const searchBox = style({
-  $debugName: 'searchBox',
+export const searchGroup = style(
+  {
+    $debugName: 'searchGroup',
+  }
+);
 
-  borderColor: '#ccc',
-  borderWidth: px(1),
-  borderStyle: 'solid',
-  borderRadius: px(4),
-  fontSize: px(20),
-  margin: 0,
-  padding: px(10),
-  width: px(400),
-});
-
-export const searchButton = style({
-  $debugName: 'searchButton',
-
-  borderWidth: px(1),
-  borderStyle: 'solid',
-  borderRadius: px(4),
-  cursor: 'pointer',
-  fontSize: px(20),
-  height: px(45),
-  margin: 0,
-  marginLeft: px(10),
-  padding: '5px 10px',
-});
+export const searchButton = style(
+  {
+    $debugName: 'searchButton',
+  },
+  media(
+    { maxWidth: px(450) },
+    { display: 'none' },
+  ),
+);
 
 export const results = style({
   $debugName: 'results',
+
+  marginBottom: px(75)
+});
+
+export const suggestions = style({
+  $debugName: 'suggestions',
 
   marginTop: px(35),
 
@@ -108,5 +107,10 @@ export const spinnerContainer = style({
   display: 'flex',
   justifyContent: 'center',
   marginTop: px(75),
+  marginBottom: px(75),
   width: '100%',
 })
+
+export const footer = style({
+  fontSize: 'small'
+});

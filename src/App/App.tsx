@@ -6,6 +6,8 @@ import { BounceLoader as Spinner } from 'react-spinners';
 import { Button, FormControl, InputGroup } from 'react-bootstrap';
 import { getProp } from 'typed-get-prop';
 import { flatten, uniq } from 'lodash';
+import { HeaderLogo } from '../HeaderLogo/HeaderLogo';
+import { ScreenSize } from '../ScreenSize/ScreenSize';
 
 interface Props {
 }
@@ -48,11 +50,11 @@ class App extends React.Component<Props, State> {
   // }
 
   // readonly state: State = {
-  //   lastSearchText: 'food fight',
+  //   lastSearchText: 'foo bar',
   //   searching: false,
-  //   searchText: 'food fight',
+  //   searchText: 'foo bar',
   //   searchResult: {
-  //     match: 'food-fight',
+  //     match: 'foo-bar',
   //     suggestions: [
   //     ]
   //   }
@@ -192,7 +194,7 @@ class App extends React.Component<Props, State> {
   renderSuggestions(suggestions: string[]) {
     return (
       suggestions.length ?
-        <section className={styles.results}>
+        <section className={styles.suggestions}>
           <ul>
             {
               suggestions.map(packageName => (
@@ -222,37 +224,42 @@ class App extends React.Component<Props, State> {
     return (
       <div className={styles.app}>
         <header>
-          <img
-            alt="NPM Name Finder"
-            className={styles.logo}
-            src={logoUrl}
-          />
+          <HeaderLogo />
+
           <p className={styles.subtitle}>
             Quickly find
-            the <span className={styles.perfectText}>perfect</span> <span className={styles.availableText}>available</span> name
+            the <span className={styles.perfectText}>perfect</span> okayest, <span className={styles.availableText}>available</span> name
             for your new NPM package.
           </p>
         </header>
 
         <section className={styles.search}>
-          <form onSubmit={this.search}>
-            <InputGroup>
-              <FormControl
-                autoFocus={true}
-                aria-label="Package name"
-                disabled={this.state.searching}
-                onChange={this.handleSearchBoxChange}
-                placeholder="Package name"
-                value={this.state.searchText}
-              />
-              <InputGroup.Append>
-                <Button
-                  disabled={this.state.searching || !hasSearchText}
-                  onClick={this.search}
-                  variant="dark"
-                >Search</Button>
-              </InputGroup.Append>
-            </InputGroup>
+          <form onSubmit={this.search} className={styles.searchForm}>
+            <ScreenSize>
+              {({ size }) => (
+                <InputGroup className={styles.searchGroup}>
+                  <FormControl
+                    autoFocus={true}
+                    aria-label="Package name"
+                    disabled={this.state.searching}
+                    onChange={this.handleSearchBoxChange}
+                    placeholder="Package name"
+                    value={this.state.searchText}
+                  />
+                  {
+                    (size.width >= styles.showSearchButtonAtScreenWidth) && (
+                      <InputGroup.Append className={styles.searchButton}>
+                        <Button
+                          disabled={this.state.searching || !hasSearchText}
+                          onClick={this.search}
+                          variant="dark"
+                        >Search</Button>
+                      </InputGroup.Append>
+                    )
+                  }
+                </InputGroup>
+              )}
+            </ScreenSize>
           </form>
         </section>
 
@@ -262,7 +269,7 @@ class App extends React.Component<Props, State> {
               <Spinner color="#c22" size={80} />
             </div> :
             (
-              <>
+              <section className={styles.results}>
                 {
                   (!!searchMatch) && this.renderAvailable(searchMatch)
                 }
@@ -275,9 +282,13 @@ class App extends React.Component<Props, State> {
                     })
                   )
                 }
-              </>
+              </section>
             )
         }
+
+        <footer className={styles.footer}>
+          Copyright {(new Date()).getFullYear()} <a href="https://github.com/codeandcats">codeandcats</a>.
+        </footer>
       </div>
     );
   }
