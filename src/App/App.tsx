@@ -3,36 +3,83 @@ import logoUrl from './logo.png';
 import * as styles from './App.styles';
 import { setState } from '../utils/react';
 import { BounceLoader as Spinner } from 'react-spinners';
+import { Button, FormControl, InputGroup } from 'react-bootstrap';
+import { getProp } from 'typed-get-prop';
+import { flatten, uniq } from 'lodash';
 
 interface Props {
 }
 
 interface SearchResult {
-  packageName: string;
-  isAvailable: boolean;
+  match: string | undefined;
+  suggestions: string[];
 }
 
 interface State {
+  lastSearchText: string;
   searching: boolean;
   searchText: string;
-  searchResults?: SearchResult[];
+  searchResult?: SearchResult;
 }
 
 class App extends React.Component<Props, State> {
   readonly state: State = {
+    lastSearchText: '',
     searching: false,
-    searchText: ''
+    searchText: '',
   };
 
-  private getSynonyms = async (word: string) => {
+  // readonly state: State = {
+  //   lastSearchText: 'package',
+  //   searching: false,
+  //   searchText: 'package',
+  //   searchResult: {
+  //     match: '',
+  //     suggestions: [
+  //       'bailout',
+  //       'wrapping',
+  //       'software',
+  //       'bundling',
+  //       'consignment',
+  //       'entirety',
+  //       'truckload',
+  //     ]
+  //   }
+  // }
+
+  // readonly state: State = {
+  //   lastSearchText: 'food fight',
+  //   searching: false,
+  //   searchText: 'food fight',
+  //   searchResult: {
+  //     match: 'food-fight',
+  //     suggestions: [
+  //     ]
+  //   }
+  // }
+
+  private searchTextToPackageNameVariants = (text: string) => {
+    const trimmedText = text.trim();
+    if (!trimmedText) {
+      return [];
+    }
+
+    const packageNames: string[] = uniq([
+      trimmedText.replace(/\s+/gm, '-').toLowerCase(),
+      trimmedText.replace(/\s+/gm, '').toLowerCase(),
+    ]);
+
+    return packageNames;
+  };
+
+  private getRelatedWords = async (word: string) => {
     const words = word
       .replace(/[-_]/gm, ' ')
       .replace(/\s+/gm, '+');
     const url = `https://api.datamuse.com/words?ml=${words}`;
     const response = await fetch(url);
-    const synonyms = await response.json() as { word: string }[];
-    synonyms.splice(20, 1000);
-    return synonyms;
+    const results = await response.json() as { word: string }[];
+    return results.map(result => result.word);
   };
 
   private isPackageNameAvailable = async (packageName: string) => {
@@ -43,10 +90,29 @@ class App extends React.Component<Props, State> {
     return isAvailable;
   }
 
-  private handleSearchBoxChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  private handleSearchBoxChange = (event: React.ChangeEvent<FormControl>) => {
     this.setState({
-      searchText: event.target.value
+      searchText: (event.target as any as HTMLInputElement).value
     });
+  }
+
+  private getAvailabilityOfPackages = async (packageNames: string[]) => Promise.all(
+    packageNames.map(async packageName => ({
+      packageName,
+      isAvailable: await this.isPackageNameAvailable(packageName)
+    }))
+  );
+
+  private getSuggestedPackageNames = async () => {
+    const relatedWords = (await this.getRelatedWords(this.state.searchText));
+    const relatedPackageNames = flatten(relatedWords.map(
+      synonym => this.searchTextToPackageNameVariants(synonym)
+    ));
+    const relatedPackageAvailability = await this.getAvailabilityOfPackages(relatedPackageNames);
+    const suggestions = relatedPackageAvailability
+      .filter(pkg => pkg.isAvailable)
+      .map(pkg => pkg.packageName);
+    return suggestions;
   }
 
   private search = async (event: React.FormEvent<HTMLFormElement | HTMLButtonElement>) => {
@@ -56,35 +122,103 @@ class App extends React.Component<Props, State> {
       return;
     }
 
+    const searchText = this.state.searchText;
+
     await setState(this, {
-      searching: true
+      searching: true,
+      lastSearchText: searchText
     });
 
     try {
-      const synonyms = (await this.getSynonyms(this.state.searchText))
-        .map(synonym => synonym.word);
+      const matchingPackageNames = this.searchTextToPackageNameVariants(searchText);
+      const matchingPackageAvailability = await this.getAvailabilityOfPackages(matchingPackageNames);
 
-      const packageNames = [this.state.searchText].concat(synonyms);
+      if (matchingPackageAvailability.some(pkg => pkg.isAvailable)) {
+        await setState(this, {
+          searching: false,
+          searchResult: {
+            match: matchingPackageAvailability[0].packageName,
+            suggestions: []
+          }
+        });
+        return;
+      }
 
-      const searchResults = await Promise.all(packageNames.map(async packageName => ({
-        packageName,
-        isAvailable: await this.isPackageNameAvailable(packageName)
-      })));
+      const suggestions = await this.getSuggestedPackageNames();
 
       await setState(this, {
         searching: false,
-        searchResults,
+        searchResult: {
+          match: '',
+          suggestions
+        },
       });
 
     } catch (err) {
       setState(this, {
         searching: false,
-        searchResults: undefined
+        searchResult: {
+          match: '',
+          suggestions: []
+        }
       });
     }
   }
 
+  renderAvailable(packageName: string) {
+    return (
+      <>
+        <h3 className={styles.available}>
+          Good news, {packageName} is available!
+        </h3>
+      </>
+    );
+  }
+
+  renderUnavailable({ lastSearchText, suggestions }: { lastSearchText: string, suggestions: string[] }) {
+    return (
+      <>
+        <h3 className={styles.unavailable}>
+          Sorry, {lastSearchText} is unavailable.
+        </h3>
+        <p>
+          Here are some related package names that are available.
+        </p>
+        {this.renderSuggestions(suggestions)}
+      </>
+    )
+  }
+
+  renderSuggestions(suggestions: string[]) {
+    return (
+      suggestions.length ?
+        <section className={styles.results}>
+          <ul>
+            {
+              suggestions.map(packageName => (
+                <li key={packageName}>
+                  {packageName}
+                </li>
+              ))
+            }
+          </ul>
+        </section>
+        : null
+    );
+  }
+
   render() {
+    const hasSearchText = !!`${this.state.searchText}`.trim();
+    const searchMatch = getProp(this.state, 'searchResult', 'match');
+    const suggestions = getProp(this.state, 'searchResult', 'suggestions') || [];
+    const lastSearchText = this.state.lastSearchText;
+    const isNoMatch = !searchMatch && !!lastSearchText;
+    console.log({
+      isNoMatch,
+      lastSearchText,
+      searchMatch,
+    });
+
     return (
       <div className={styles.app}>
         <header>
@@ -93,7 +227,7 @@ class App extends React.Component<Props, State> {
             className={styles.logo}
             src={logoUrl}
           />
-          <p>
+          <p className={styles.subtitle}>
             Quickly find
             the <span className={styles.perfectText}>perfect</span> <span className={styles.availableText}>available</span> name
             for your new NPM package.
@@ -102,50 +236,48 @@ class App extends React.Component<Props, State> {
 
         <section className={styles.search}>
           <form onSubmit={this.search}>
-            <input
-              className={styles.searchBox}
-              disabled={this.state.searching}
-              id="searchBox"
-              onChange={this.handleSearchBoxChange}
-              placeholder="Package name"
-              type="text"
-              value={this.state.searchText}
-            />
-            <button
-              className={styles.searchButton}
-              disabled={this.state.searching}
-              onClick={this.search}
-            >Search</button>
+            <InputGroup>
+              <FormControl
+                autoFocus={true}
+                aria-label="Package name"
+                disabled={this.state.searching}
+                onChange={this.handleSearchBoxChange}
+                placeholder="Package name"
+                value={this.state.searchText}
+              />
+              <InputGroup.Append>
+                <Button
+                  disabled={this.state.searching || !hasSearchText}
+                  onClick={this.search}
+                  variant="dark"
+                >Search</Button>
+              </InputGroup.Append>
+            </InputGroup>
           </form>
         </section>
 
-        <section className={styles.results}>
-          {
-            this.state.searching ?
-              <div className={styles.spinnerContainer}>
-                <Spinner color="#c22" size={80} />
-              </div> :
-              (
-                <ul>
-                  {
-                    this.state.searchResults ?
-                      this.state.searchResults.map(searchResult => (
-                        <li
-                          className={
-                            searchResult.isAvailable ?
-                              styles.available :
-                              styles.unavailable
-                          }
-                          key={searchResult.packageName}
-                        >
-                          {searchResult.packageName}
-                        </li>
-                      )) : null
-                  }
-                </ul>
-              )
-          }
-        </section>
+        {
+          this.state.searching ?
+            <div className={styles.spinnerContainer}>
+              <Spinner color="#c22" size={80} />
+            </div> :
+            (
+              <>
+                {
+                  (!!searchMatch) && this.renderAvailable(searchMatch)
+                }
+
+                {
+                  isNoMatch && (
+                    this.renderUnavailable({
+                      lastSearchText: this.state.lastSearchText,
+                      suggestions
+                    })
+                  )
+                }
+              </>
+            )
+        }
       </div>
     );
   }

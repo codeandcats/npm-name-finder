@@ -15,6 +15,12 @@ export const logo = style({
   width: px(600),
 });
 
+export const subtitle = style({
+  $debugName: 'subtitle',
+
+  marginTop: px(20)
+});
+
 export const perfectText = style({
   $debugName: 'perfectText',
 
@@ -32,6 +38,7 @@ export const search = style({
   $debugName: 'search',
 
   marginTop: px(50),
+  marginBottom: px(40),
   display: 'flex',
   flexDirection: 'row',
   justifyContent: 'center',
