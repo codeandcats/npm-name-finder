@@ -1,11 +1,6 @@
 import { style, media, keyframes } from 'typestyle';
 import { px, percent } from 'csx';
 
-const logoOriginalSize = {
-  width: 800,
-  height: 213
-};
-
 export const container = style(
   {
     $debugName: 'container',

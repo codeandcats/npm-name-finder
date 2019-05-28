@@ -1,5 +1,4 @@
 import React from 'react';
-import logoUrl from './logo.png';
 import * as styles from './App.styles';
 import { setState } from '../utils/react';
 import { BounceLoader as Spinner } from 'react-spinners';
@@ -135,11 +134,12 @@ class App extends React.Component<Props, State> {
       const matchingPackageNames = this.searchTextToPackageNameVariants(searchText);
       const matchingPackageAvailability = await this.getAvailabilityOfPackages(matchingPackageNames);
 
-      if (matchingPackageAvailability.some(pkg => pkg.isAvailable)) {
+      const firstAvailableMatchingPackage = matchingPackageAvailability.find(pkg => pkg.isAvailable);
+      if (firstAvailableMatchingPackage) {
         await setState(this, {
           searching: false,
           searchResult: {
-            match: matchingPackageAvailability[0].packageName,
+            match: firstAvailableMatchingPackage.packageName,
             suggestions: []
           }
         });
