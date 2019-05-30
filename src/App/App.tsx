@@ -6,7 +6,6 @@ import { Button, FormControl, InputGroup } from 'react-bootstrap';
 import { getProp } from 'typed-get-prop';
 import { flatten, uniq } from 'lodash';
 import { HeaderLogo } from '../HeaderLogo/HeaderLogo';
-import { ScreenSize } from '../ScreenSize/ScreenSize';
 
 interface Props {
 }
@@ -235,31 +234,23 @@ class App extends React.Component<Props, State> {
 
         <section className={styles.search}>
           <form onSubmit={this.search} className={styles.searchForm}>
-            <ScreenSize>
-              {({ size }) => (
-                <InputGroup className={styles.searchGroup}>
-                  <FormControl
-                    autoFocus={true}
-                    aria-label="Package name"
-                    disabled={this.state.searching}
-                    onChange={this.handleSearchBoxChange}
-                    placeholder="Package name"
-                    value={this.state.searchText}
-                  />
-                  {
-                    (size.width >= styles.showSearchButtonAtScreenWidth) && (
-                      <InputGroup.Append className={styles.searchButton}>
-                        <Button
-                          disabled={this.state.searching || !hasSearchText}
-                          onClick={this.search}
-                          variant="dark"
-                        >Search</Button>
-                      </InputGroup.Append>
-                    )
-                  }
-                </InputGroup>
-              )}
-            </ScreenSize>
+            <InputGroup className={styles.searchGroup}>
+              <FormControl
+                autoFocus={true}
+                aria-label="Package name"
+                disabled={this.state.searching}
+                onChange={this.handleSearchBoxChange}
+                placeholder="Package name"
+                value={this.state.searchText}
+              />
+              <InputGroup.Append className={styles.searchButton}>
+                <Button
+                  disabled={this.state.searching || !hasSearchText}
+                  onClick={this.search}
+                  variant="dark"
+                >Search</Button>
+              </InputGroup.Append>
+            </InputGroup>
           </form>
         </section>
 

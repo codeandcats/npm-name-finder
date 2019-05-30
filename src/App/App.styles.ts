@@ -58,10 +58,12 @@ export const searchGroup = style(
 export const searchButton = style(
   {
     $debugName: 'searchButton',
+
+    display: 'none'
   },
   media(
-    { maxWidth: px(450) },
-    { display: 'none' },
+    { minWidth: px(showSearchButtonAtScreenWidth) },
+    { display: 'block' },
   ),
 );
 
