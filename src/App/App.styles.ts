@@ -24,10 +24,15 @@ export const perfectText = style({
   textDecoration: 'line-through',
 });
 
+export const packageName = style({
+  $debugName: 'packageName',
+})
+
 export const availableText = style({
   $debugName: 'availableText',
 
   color: '#050',
+  fontStyle: 'italic',
 });
 
 export const searchForm = style(
@@ -93,13 +98,25 @@ export const suggestions = style({
 export const unavailable = style({
   $debugName: 'unavailable',
 
-  color: '#500'
+  color: '#500',
+
+  $nest: {
+    a: {
+      color: '#cb3837'
+    }
+  }
 })
 
 export const available = style({
   $debugName: 'available',
 
-  color: '#050'
+  color: '#050',
+
+  $nest: {
+    [` .${packageName}`]: {
+      color: '#00a800'
+    }
+  }
 })
 
 export const spinnerContainer = style({

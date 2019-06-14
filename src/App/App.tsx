@@ -6,12 +6,14 @@ import { Button, FormControl, InputGroup } from 'react-bootstrap';
 import { getProp } from 'typed-get-prop';
 import { flatten, uniq } from 'lodash';
 import { HeaderLogo } from '../HeaderLogo/HeaderLogo';
+import { PackageDetails, getPackageNameVariants, getPackageDetails, getAllPackageDetails } from '../utils/npm';
+import { getSuggestedPackageNames } from '../utils/suggestions';
 
 interface Props {
 }
 
 interface SearchResult {
-  match: string | undefined;
+  matches: PackageDetails[];
   suggestions: string[];
 }
 
@@ -20,6 +22,12 @@ interface State {
   searching: boolean;
   searchText: string;
   searchResult?: SearchResult;
+}
+
+interface RenderUnavailableOptions {
+  searchText: string;
+  packageDetails: Pick<PackageDetails, 'name' | 'url'>;
+  suggestions: string[];
 }
 
 class App extends React.Component<Props, State> {
@@ -58,61 +66,10 @@ class App extends React.Component<Props, State> {
   //   }
   // }
 
-  private searchTextToPackageNameVariants = (text: string) => {
-    const trimmedText = text.trim();
-    if (!trimmedText) {
-      return [];
-    }
-
-    const packageNames: string[] = uniq([
-      trimmedText.replace(/\s+/gm, '-').toLowerCase(),
-      trimmedText.replace(/\s+/gm, '').toLowerCase(),
-    ]);
-
-    return packageNames;
-  };
-
-  private getRelatedWords = async (word: string) => {
-    const words = word
-      .replace(/[-_]/gm, ' ')
-      .replace(/\s+/gm, '+');
-    const url = `https://api.datamuse.com/words?ml=${words}`;
-    const response = await fetch(url);
-    const results = await response.json() as { word: string }[];
-    return results.map(result => result.word);
-  };
-
-  private isPackageNameAvailable = async (packageName: string) => {
-    const url = `https://api.npms.io/v2/search?q=${packageName}`;
-    const response = await fetch(url);
-    const apiResult: any = (await response.json());
-    const isAvailable = !apiResult.results.some((result: any) => result.package.name === packageName);
-    return isAvailable;
-  }
-
   private handleSearchBoxChange = (event: React.ChangeEvent<FormControl>) => {
     this.setState({
       searchText: (event.target as any as HTMLInputElement).value
     });
-  }
-
-  private getAvailabilityOfPackages = async (packageNames: string[]) => Promise.all(
-    packageNames.map(async packageName => ({
-      packageName,
-      isAvailable: await this.isPackageNameAvailable(packageName)
-    }))
-  );
-
-  private getSuggestedPackageNames = async () => {
-    const relatedWords = (await this.getRelatedWords(this.state.searchText));
-    const relatedPackageNames = flatten(relatedWords.map(
-      synonym => this.searchTextToPackageNameVariants(synonym)
-    ));
-    const relatedPackageAvailability = await this.getAvailabilityOfPackages(relatedPackageNames);
-    const suggestions = relatedPackageAvailability
-      .filter(pkg => pkg.isAvailable)
-      .map(pkg => pkg.packageName);
-    return suggestions;
   }
 
   private search = async (event: React.FormEvent<HTMLFormElement | HTMLButtonElement>) => {
@@ -122,7 +79,7 @@ class App extends React.Component<Props, State> {
       return;
     }
 
-    const searchText = this.state.searchText;
+    const { searchText } = this.state;
 
     await setState(this, {
       searching: true,
@@ -130,27 +87,26 @@ class App extends React.Component<Props, State> {
     });
 
     try {
-      const matchingPackageNames = this.searchTextToPackageNameVariants(searchText);
-      const matchingPackageAvailability = await this.getAvailabilityOfPackages(matchingPackageNames);
+      const packageNameVariants = getPackageNameVariants(searchText);
+      const packageNameVariantDetails = await getAllPackageDetails(packageNameVariants);
 
-      const firstAvailableMatchingPackage = matchingPackageAvailability.find(pkg => pkg.isAvailable);
-      if (firstAvailableMatchingPackage) {
+      if (packageNameVariantDetails.some(pkg => pkg.isAvailable)) {
         await setState(this, {
           searching: false,
           searchResult: {
-            match: firstAvailableMatchingPackage.packageName,
+            matches: packageNameVariantDetails,
             suggestions: []
           }
         });
         return;
       }
 
-      const suggestions = await this.getSuggestedPackageNames();
+      const suggestions = await getSuggestedPackageNames(searchText);
 
       await setState(this, {
         searching: false,
         searchResult: {
-          match: '',
+          matches: packageNameVariantDetails,
           suggestions
         },
       });
@@ -159,32 +115,36 @@ class App extends React.Component<Props, State> {
       setState(this, {
         searching: false,
         searchResult: {
-          match: '',
+          matches: [],
           suggestions: []
         }
       });
     }
   }
 
-  renderAvailable(packageName: string) {
+  renderAvailable = (packageName: string) => {
     return (
       <>
         <h3 className={styles.available}>
-          Good news, {packageName} is available!
+          Good news, <span className={styles.packageName}>{packageName}</span> is available!
         </h3>
       </>
     );
   }
 
-  renderUnavailable({ lastSearchText, suggestions }: { lastSearchText: string, suggestions: string[] }) {
+  renderUnavailable = ({ searchText, packageDetails, suggestions }: RenderUnavailableOptions) => {
     return (
       <>
         <h3 className={styles.unavailable}>
-          Sorry, {lastSearchText} is unavailable.
+          Sorry, <a href={packageDetails.url} target="_blank">{searchText}</a> is unavailable.
         </h3>
-        <p>
-          Here are some related package names that are available.
-        </p>
+        {
+          suggestions.length ? (
+            <p>
+              Here are some related package names that are available.
+            </p>
+          ) : null
+        }
         {this.renderSuggestions(suggestions)}
       </>
     )
@@ -210,15 +170,13 @@ class App extends React.Component<Props, State> {
 
   render() {
     const hasSearchText = !!`${this.state.searchText}`.trim();
-    const searchMatch = getProp(this.state, 'searchResult', 'match');
+    const matchingPackages = getProp(this.state, 'searchResult', 'matches') || [];
+    const availableMatchingPackage = matchingPackages.find(pkg => pkg.isAvailable);
+    const availableMatchingPackageName = getProp(availableMatchingPackage, 'name');
+
     const suggestions = getProp(this.state, 'searchResult', 'suggestions') || [];
     const lastSearchText = this.state.lastSearchText;
-    const isNoMatch = !searchMatch && !!lastSearchText;
-    console.log({
-      isNoMatch,
-      lastSearchText,
-      searchMatch,
-    });
+    const isNoMatch = !availableMatchingPackageName && !!lastSearchText;
 
     return (
       <div className={styles.app}>
@@ -262,13 +220,14 @@ class App extends React.Component<Props, State> {
             (
               <section className={styles.results}>
                 {
-                  (!!searchMatch) && this.renderAvailable(searchMatch)
+                  (!!availableMatchingPackageName) && this.renderAvailable(availableMatchingPackageName)
                 }
 
                 {
                   isNoMatch && (
                     this.renderUnavailable({
-                      lastSearchText: this.state.lastSearchText,
+                      searchText: this.state.lastSearchText,
+                      packageDetails: matchingPackages[0],
                       suggestions
                     })
                   )
