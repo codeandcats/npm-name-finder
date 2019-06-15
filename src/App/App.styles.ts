@@ -1,4 +1,4 @@
-import { px, percent } from 'csx';
+import { px, percent, viewHeight } from 'csx';
 import { style, media } from 'typestyle';
 
 export const showSearchButtonAtScreenWidth = 450;
@@ -9,6 +9,29 @@ export const app = style({
   padding: px(50),
   boxSizing: 'border-box',
   textAlign: 'center',
+  display: 'flex',
+  flexDirection: 'column',
+  minHeight: viewHeight(100),
+
+  transition: 'background-color .8s',
+});
+
+export const appExactMatchAvailable = style({
+  $debugName: 'appExactMatchAvailable',
+
+  backgroundColor: 'rgba(0, 120, 0, .2)',
+});
+
+export const appExactMatchUnavailable = style({
+  $debugName: 'appExactMatchUnavailable',
+
+  backgroundColor: 'rgba(120, 0, 0, .2)',
+});
+
+export const content = style({
+  $debugName: 'content',
+
+  flex: 1,
 });
 
 export const subtitle = style({
